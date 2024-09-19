@@ -36,6 +36,8 @@ class HooksRegistry {
 		array( 'rest_api_init', array( \WC_Helper_Subscriptions_API::class, 'register_rest_routes' ) ),
 		array( 'rest_api_init', array( \WC_Helper_Orders_API::class, 'register_rest_routes' ) ),
 		array( 'determine_current_user', array( \WC_WCCOM_Site::class, 'authenticate_wccom' ), 14 ),
+		array( 'query_vars', array( 'WC_Auth', 'add_query_vars_static' ), 0 ),
+		array( 'init', array( 'WC_Auth', 'add_endpoint' ), 0 ),
 	);
 
 	/**
@@ -64,6 +66,10 @@ class HooksRegistry {
 		array( 'wp_ajax_woocommerce_dismiss_product_usage_notice', array( \WC_Product_Usage_Notice::class, 'ajax_dismiss' ) ),
 		array( 'wp_ajax_woocommerce_remind_later_product_usage_notice', array( \WC_Product_Usage_Notice::class, 'ajax_remind_later' ) ),
 		array( 'woocommerce_helper_loaded', array( \WC_Helper_Compat::class, 'helper_loaded' ) ),
+		array( 'image_get_intermediate_size', array( 'WC_Regenerate_Images', 'filter_image_get_intermediate_size' ), 10, 3 ),
+		array( 'init', array( 'WC_Marketplace_Updater', 'init' ) ),
+		array( 'init', array( 'WC_Admin_Marketplace_Promotions', 'init' ), 11 ),
+		array( 'admin_init', array( 'WC_Tracks_Client', 'maybe_set_identity_cookie' ) ),
 	);
 
 	/**
@@ -71,7 +77,10 @@ class HooksRegistry {
 	 *
 	 * @var array $admin_filters
 	 */
-	private static array $admin_filters = array();
+	private static array $admin_filters = array(
+		array( 'image_get_intermediate_size', array( 'WC_Regenerate_Images', 'filter_image_get_intermediate_size' ), 10, 3 ),
+		array( 'wp_get_attachment_image_src', array( 'WC_Regenerate_Images', 'maybe_resize_image' ), 10, 4 ),
+	);
 
 	/**
 	 * Load all registered hooks.
@@ -85,12 +94,14 @@ class HooksRegistry {
 			call_user_func_array( 'add_filter', $filter );
 		}
 
-		foreach ( self::$admin_actions as $action ) {
-			call_user_func_array( 'add_action', $action );
-		}
+		if ( is_admin() ) {
+			foreach ( self::$admin_actions as $action ) {
+				call_user_func_array( 'add_action', $action );
+			}
 
-		foreach ( self::$admin_filters as $filter ) {
-			call_user_func_array( 'add_filter', $filter );
+			foreach ( self::$admin_filters as $filter ) {
+				call_user_func_array( 'add_filter', $filter );
+			}
 		}
 
 		foreach ( self::$frontend_actions as $action ) {
@@ -106,13 +117,16 @@ class HooksRegistry {
 	 * DANGEROUS: This method is used for testing and benchmarking. Do not call, unless you really know what you are doing.
 	 */
 	public static function unload_hooks() {
-		foreach ( self::$admin_actions as $action ) {
-			call_user_func_array( 'remove_action', $action );
+		if ( is_admin() ) {
+			foreach ( self::$admin_actions as $action ) {
+				call_user_func_array( 'remove_action', $action );
+			}
+
+			foreach ( self::$admin_filters as $filter ) {
+				call_user_func_array( 'remove_filter', $filter );
+			}
 		}
 
-		foreach ( self::$admin_filters as $filter ) {
-			call_user_func_array( 'remove_filter', $filter );
-		}
 		foreach ( self::$frontend_actions as $action ) {
 			call_user_func_array( 'remove_action', $action );
 		}
@@ -129,4 +143,5 @@ class HooksRegistry {
 			call_user_func_array( 'remove_filter', $filter );
 		}
 	}
+
 }
