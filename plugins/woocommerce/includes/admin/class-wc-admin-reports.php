@@ -211,13 +211,23 @@ class WC_Admin_Reports {
 		 *         if ( is_admin() ) {
 		 *             // ...
 		 *
+		 * @since 2.1.0
+		 *
+		 * @deprecated 9.5.0 The use of this filter for legacy Reports is deprecated and will be removed in future versions. Use Analytics instead.
+		 *
 		 * @param array $reports The associative array of reports.
 		 */
 		$reports = apply_filters( 'woocommerce_admin_reports', $reports );
-		$reports = apply_filters( 'woocommerce_reports_charts', $reports ); // Backwards compatibility.
+		$reports = apply_filters_deprecated(
+			'woocommerce_reports_charts',
+			array( $reports ),
+			'9.5.0',
+			null,
+			'Reports are deprecated and will be removed in future versions. Use Analytics instead.',
+		);
 
 		foreach ( $reports as $key => &$report_group ) {
-			// Silently ignore reports given for the filter in Automattic\WooCommerce\Admin\API\Reports\Controller.
+			// Silently ignore unrelated entries.
 			if ( ! isset( $report_group['reports'] ) ) {
 				unset( $reports[ $key ] );
 				continue;
