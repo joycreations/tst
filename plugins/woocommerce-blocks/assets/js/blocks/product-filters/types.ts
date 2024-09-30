@@ -19,6 +19,12 @@ export interface BlockAttributes {
 	overlayIconSize?: number;
 }
 
+export const enum StockStatus {
+	IN_STOCK = 'instock',
+	OUT_OF_STOCK = 'outofstock',
+	ON_BACKORDER = 'onbackorder',
+}
+
 export type FilterOptionItem = {
 	label: string;
 	value: string;
@@ -30,11 +36,15 @@ export type FilterBlockContext = {
 	filterData: {
 		isLoading: boolean;
 		items?: FilterOptionItem[];
-		range?: {
-			min: number;
-			max: number;
-			step: number;
+		price?: {
+			minPrice: number;
+			minRange: number;
+			maxPrice: number;
+			maxRange: number;
 		};
+		stock: Array< {
+			status: StockStatus;
+			count: number;
+		} >;
 	};
-	isParentSelected: boolean;
 };
