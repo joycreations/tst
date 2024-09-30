@@ -3,6 +3,8 @@
  */
 import { LOCALE } from '../../../utils/admin-settings';
 import Notice from '../notice/notice';
+import { Page, Promotion } from './types';
+import PromoCard from '../promo-card/promo-card';
 
 declare global {
 	interface Window {
@@ -12,37 +14,21 @@ declare global {
 	}
 }
 
-type Promotion = {
-	date_from_gmt: string;
-	date_to_gmt: string;
-	format: string;
-	pages: Page[];
-	position: string;
-	content: { [ locale: string ]: string };
-	icon?: string;
-	is_dismissible?: boolean;
-	menu_item_id?: string;
-	style?: string;
-};
-
-type Page = {
-	page: string;
-	path: string;
-	tab?: string;
-};
-
-const Promotions: () => null | JSX.Element = () => {
+const Promotions: ( {
+	format,
+}: {
+	format?: string;
+} ) => null | JSX.Element = ( { format = 'notice' } ) => {
 	const urlParams = new URLSearchParams( window.location.search );
 	const currentPage = urlParams.get( 'page' );
 
-	// Check if the current page is not 'wc-admin'
-	if ( currentPage !== 'wc-admin' ) {
-		return null;
-	}
-	const promotions = window?.wcMarketplace?.promotions ?? [];
+	const promotions = ( window?.wcMarketplace?.promotions ?? [] ).filter(
+		( x ) => x.format === format
+	);
 	const currentDateUTC = Date.now();
 	const currentPath = decodeURIComponent( urlParams.get( 'path' ) || '' );
 	const currentTab = urlParams.get( 'tab' );
+	const pathname = window.location.pathname + window.location.search;
 
 	return (
 		<>
@@ -55,20 +41,24 @@ const Promotions: () => null | JSX.Element = () => {
 				// Check if the current page, path & tab match the promotion's pages
 				const matchesPagePath = promotion.pages.some(
 					( page: Page ) => {
-						const normalizedPath = page.path.startsWith( '/' )
-							? page.path
-							: `/${ page.path }`;
-						const normalizedCurrentPath = currentPath.startsWith(
-							'/'
-						)
-							? currentPath
-							: `/${ currentPath }`;
+						if ( page.pathname ) {
+							return page.pathname === pathname;
+						}
 
-						return page.page === currentPage &&
+						if ( ! page.path ) {
+							return false;
+						}
+
+						const normalize = ( path: string ) =>
+							path.startsWith( '/' ) ? path : `/${ path }`;
+						const normalizedPath = normalize( page.path );
+						const normalizedCurrentPath = normalize( currentPath );
+
+						return (
+							page.page === currentPage &&
 							normalizedPath === normalizedCurrentPath &&
-							page.tab
-							? page.tab === currentTab
-							: ! currentTab;
+							( page.tab ? currentTab : ! currentTab )
+						);
 					}
 				);
 
@@ -82,6 +72,11 @@ const Promotions: () => null | JSX.Element = () => {
 				// Promotion is not active
 				if ( currentDateUTC < startDate || currentDateUTC > endDate ) {
 					return null;
+				}
+
+				// Promotion is a promo
+				if ( promotion.format === 'promo-card' ) {
+					return <PromoCard key={ index } promotion={ promotion } />;
 				}
 
 				// Promotion is a notice
