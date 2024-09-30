@@ -1,4 +1,4 @@
-const { chromium, expect } = require( '@playwright/test' );
+const { chromium, expect, request } = require( '@playwright/test' );
 const { admin, customer } = require( './test-data/data' );
 const fs = require( 'fs' );
 const { site } = require( './utils' );
@@ -14,6 +14,23 @@ module.exports = async ( config ) => {
 
 	console.log( `State Dir: ${ stateDir }` );
 	console.log( `Base URL: ${ baseURL }` );
+
+	// Try calling the site reset plugin (if testing on an external environment)
+	if ( ! baseURL.includes( 'locahost' ) ) {
+		console.log( 'Resetting site...' );
+		try {
+			const reset = await request.newContext();
+			const response = await reset.get(
+				`${ baseURL }/wp-json/wc-cleanup/v1/reset?key=FUFP2UrAbJa_.GMfs*nXne*9Fq7abvYv`
+			);
+			console.log( 'Reset successful:', response.status() );
+		} catch ( error ) {
+			console.error(
+				'Reset failed:',
+				error.response ? error.response.status() : error.message
+			);
+		}
+	}
 
 	// used throughout tests for authentication
 	process.env.ADMINSTATE = `${ stateDir }adminState.json`;
